@@ -1,5 +1,5 @@
 {
-  "name": "dotenv-safe-once",
+  "name": "env-enforce",
   "version": "1.0.0",
   "description": "Zero-dependency, fail-fast environment variable validator for Node.js",
   "main": "dist/index.js",
@@ -16,14 +16,27 @@
   "engines": {
     "node": ">=16"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Decept1kon/env-enforce.git"
+  },
   "keywords": [
     "dotenv",
     "env",
     "environment",
-    "validation",
-    "startup"
+    "env validation",
+    "config",
+    "configuration",
+    "runtime validation",
+    "ci",
+    "startup",
+    "node",
+    "typescript",
+    "production",
+    "schema",
+    "guard"
   ],
-  "author": "Josh Nauer",
+  "author": "Decept1kon",
   "license": "MIT",
   "devDependencies": {
     "typescript": "~5.3.0"

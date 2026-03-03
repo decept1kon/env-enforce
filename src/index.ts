@@ -18,7 +18,7 @@ import {
  *
  * @example
  * ```ts
- * import { validateEnv } from "dotenv-safe-once";
+ * import { validateEnv } from "env-enforce";
  * import "dotenv/config";
  *
  * const env = validateEnv({

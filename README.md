@@ -287,6 +287,39 @@ npm run test:smoke
 npm test
 ```
 
+## Contributing
+
+Contributions are welcome, especially around:
+
+- **Real-world use cases**: new examples, CI setups, and edge cases.
+- **DX improvements**: clearer error messages, better docs, tiny ergonomic wins.
+- **Performance and robustness**: micro-optimisations that keep the code simple.
+
+### Development workflow
+
+- **Requirements**: Node ≥16, npm.
+- **Install**:
+
+```bash
+git clone https://github.com/decept1kon/env-enforce.git
+cd env-enforce
+npm install
+```
+
+- **Build & test**:
+
+```bash
+npm run build
+npm run test:smoke
+npm test
+```
+
+### Pull requests
+
+- Keep the **API surface minimal** and **zero-dependency** at runtime.
+- Prefer small, focused PRs with a short motivation in the description.
+- Include tests for new behavior and update the README where relevant.
+
 ## License
 
 MIT
