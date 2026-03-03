@@ -1,4 +1,4 @@
-# dotenv-safe-once
+# env-enforce
 
 ![runtime size](https://img.shields.io/badge/runtime-~12KB%20JS,_0%20deps-brightgreen)
 
@@ -13,7 +13,7 @@ A zero-dependency, fail-fast environment variable validator for Node.js services
 ## Install
 
 ```bash
-npm install dotenv-safe-once
+npm install env-enforce
 ```
 
 ## Quick start
@@ -22,7 +22,7 @@ Load `.env` with [dotenv](https://www.npmjs.com/package/dotenv) (or similar), th
 
 ```ts
 import "dotenv/config";
-import { validateEnv } from "dotenv-safe-once";
+import { validateEnv } from "env-enforce";
 
 const env = validateEnv({
   PORT: { type: "number", required: true },
@@ -92,8 +92,8 @@ import type {
   Reporter,
   ValidationResult,
   ValidationError,
-} from "dotenv-safe-once";
-import { EnvValidationError } from "dotenv-safe-once";
+} from "env-enforce";
+import { EnvValidationError } from "env-enforce";
 ```
 
 ## Examples
@@ -218,7 +218,7 @@ const env = validateEnv({
 
 ## Comparison with other tools
 
-| | dotenv-safe-once | dotenv-safe | envalid | t3-env |
+| | env-enforce | dotenv-safe | envalid | t3-env |
 |--|------------------|-------------|---------|--------|
 | Dependencies | 0 | dotenv | 0 | zod |
 | Parses .env file | No | Yes | No | No |
@@ -233,7 +233,7 @@ const env = validateEnv({
 | GHA annotation output | Yes | No | No | — |
 | Runtime size disclosure | ~12 KB JS CommonJS, 0 deps | — | — | — |
 
-**When to use dotenv-safe-once**
+**When to use env-enforce**
 
 - You already load env with `dotenv` and only want validation.
 - You want strict checks (missing + invalid + unexpected + unused) with a tiny mental model.
