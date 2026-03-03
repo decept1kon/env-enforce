@@ -1,0 +1,31 @@
+{
+  "name": "dotenv-safe-once",
+  "version": "1.0.0",
+  "description": "Zero-dependency, fail-fast environment variable validator for Node.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test test/env.test.mjs",
+    "test:smoke": "npm run build && node test/smoke.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "keywords": [
+    "dotenv",
+    "env",
+    "environment",
+    "validation",
+    "startup"
+  ],
+  "author": "Josh Nauer",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "~5.3.0"
+  }
+}

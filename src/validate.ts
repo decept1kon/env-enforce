@@ -1,0 +1,161 @@
+import type {
+  Schema,
+  SchemaEntry,
+  ValidateOptions,
+  ValidationError as ValidationErrorType,
+  ValidationResult,
+} from "./types.js";
+
+const BOOLEAN_TRUE = new Set(["true", "1", "yes"]);
+const BOOLEAN_FALSE = new Set(["false", "0", "no", ""]);
+
+function parseBoolean(raw: string | undefined): boolean {
+  if (raw === undefined) return false;
+  const lower = raw.toLowerCase().trim();
+  if (BOOLEAN_TRUE.has(lower)) return true;
+  if (BOOLEAN_FALSE.has(lower)) return false;
+  return false;
+}
+
+function parseNumber(raw: string | undefined): number | null {
+  if (raw === undefined || raw === "") return null;
+  const n = Number(raw);
+  if (Number.isNaN(n)) return null;
+  return n;
+}
+
+function runValidate<T>(value: T, validate: (v: T) => true | string): true | string {
+  try {
+    return validate(value);
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
+  }
+}
+
+function parseEntry(
+  key: string,
+  spec: SchemaEntry,
+  raw: string | undefined,
+  options: ValidateOptions
+): { value?: unknown; error?: ValidationErrorType } {
+  const required = spec.required !== false;
+  const globalAllowEmpty = options.allowEmpty ?? false;
+
+  if (spec.type === "string") {
+    const s = raw ?? "";
+    const allowEmpty = spec.allowEmpty ?? globalAllowEmpty;
+    if (s === "" && !allowEmpty) {
+      if (required) {
+        return { error: { kind: "missing", key, message: `Required environment variable "${key}" is missing or empty.` } };
+      }
+      return { value: undefined };
+    }
+    if (s === "" && allowEmpty) {
+      const v = spec.validate ? runValidate("", spec.validate) : true;
+      if (v !== true) return { error: { kind: "invalid", key, message: v } };
+      return { value: "" };
+    }
+    if (spec.validate) {
+      const v = runValidate(s, spec.validate);
+      if (v !== true) return { error: { kind: "invalid", key, message: v } };
+    }
+    return { value: s };
+  }
+
+  if (spec.type === "number") {
+    const n = parseNumber(raw);
+    if (n === null) {
+      if (required && (raw === undefined || raw === "")) {
+        return { error: { kind: "missing", key, message: `Required environment variable "${key}" is missing or not a number.` } };
+      }
+      if (raw !== undefined && raw !== "") {
+        return { error: { kind: "invalid", key, message: `"${key}" must be a number, got: ${raw}` } };
+      }
+      return { value: undefined };
+    }
+    if (spec.validate) {
+      const v = runValidate(n, spec.validate);
+      if (v !== true) return { error: { kind: "invalid", key, message: v } };
+    }
+    return { value: n };
+  }
+
+  if (spec.type === "boolean") {
+    const b = parseBoolean(raw);
+    if (spec.validate) {
+      const v = runValidate(b, spec.validate);
+      if (v !== true) return { error: { kind: "invalid", key, message: v } };
+    }
+    return { value: b };
+  }
+
+  if (spec.type === "custom") {
+    try {
+      const value = spec.parse(raw);
+      if (required && value === undefined && raw === undefined) {
+        return { error: { kind: "missing", key, message: `Required environment variable "${key}" is missing.` } };
+      }
+      if (spec.validate && value !== undefined) {
+        const v = runValidate(value, spec.validate);
+        if (v !== true) return { error: { kind: "invalid", key, message: v } };
+      }
+      return { value };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return { error: { kind: "invalid", key, message } };
+    }
+  }
+
+  return { error: { kind: "invalid", key, message: `Unknown schema type for "${key}".` } };
+}
+
+export function runValidation(
+  schema: Schema,
+  options: ValidateOptions
+): ValidationResult {
+  const env = options.env ?? process.env;
+  const allowUnknown = options.allowUnknown ?? false;
+  const errors: ValidationErrorType[] = [];
+  const result: Record<string, unknown> = {};
+
+  const schemaKeys = new Set(Object.keys(schema));
+  const envKeys = new Set(Object.keys(env));
+
+  for (const key of schemaKeys) {
+    const spec = schema[key];
+    const raw = env[key];
+    const out = parseEntry(key, spec, raw, options);
+    if (out.error) {
+      errors.push(out.error);
+    } else if (out.value !== undefined) {
+      result[key] = out.value;
+    } else {
+      const required = spec.required !== false;
+      const allowUnusedOptional = options.allowUnusedOptional ?? false;
+      if (!required && !allowUnusedOptional) {
+        errors.push({
+          kind: "unused",
+          key,
+          message: `Declared variable "${key}" is not set in environment.`,
+        });
+      }
+    }
+  }
+
+  if (!allowUnknown) {
+    for (const key of envKeys) {
+      if (!schemaKeys.has(key)) {
+        errors.push({
+          kind: "unexpected",
+          key,
+          message: `Unexpected environment variable "${key}" (not in schema).`,
+        });
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return { success: false, errors };
+  }
+  return { success: true, env: result };
+}
