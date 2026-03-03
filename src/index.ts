@@ -56,6 +56,9 @@ export function validateEnv<S extends Schema>(
       createAnnotationReporter().report(result);
     }
     if (options.strictCI) {
+      process.stderr.write(
+        "\nCI strict mode violation (strictCI=true) – exiting with code 1.\n"
+      );
       process.exit(1);
     }
     throw new EnvValidationError(result.errors);

@@ -164,6 +164,47 @@ function parseEntry(
     return { value: b };
   }
 
+  if (spec.type === "enum") {
+    const hasDefault = Object.prototype.hasOwnProperty.call(spec, "default");
+    const allowed = spec.values;
+
+    let value: string | undefined;
+    const s = raw ?? "";
+    if (s === "" && hasDefault) {
+      value = spec.default as string;
+    } else if (s === "") {
+      if (required) {
+        return {
+          error: {
+            kind: "missing",
+            key,
+            message: `Required environment variable "${key}" is missing or empty.`,
+          },
+        };
+      }
+      value = undefined;
+    } else {
+      value = s;
+    }
+
+    if (value !== undefined && !allowed.includes(value)) {
+      return {
+        error: {
+          kind: "invalid",
+          key,
+          message: `"${key}" must be one of ${allowed.join(" | ")}, got: ${value}`,
+        },
+      };
+    }
+
+    if (value !== undefined && spec.validate) {
+      const v = runValidate(value, spec.validate);
+      if (v !== true) return { error: { kind: "invalid", key, message: v } };
+    }
+
+    return { value };
+  }
+
   if (spec.type === "custom") {
     const hasDefault = Object.prototype.hasOwnProperty.call(spec, "default");
     try {

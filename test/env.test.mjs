@@ -191,3 +191,33 @@ test("prefix: ignore non-prefixed env for unexpected checks", () => {
   );
   assert.strictEqual(env.APP_PORT, 4000);
 });
+
+test("enum: restricts to allowed values", () => {
+  const env = validateEnv(
+    {
+      STAGE: {
+        type: "enum",
+        values: ["development", "staging", "production"],
+        default: "development",
+      },
+    },
+    { env: {}, allowUnknown: true, allowUnusedOptional: true }
+  );
+  assert.strictEqual(env.STAGE, "development");
+
+  assert.throws(
+    () =>
+      validateEnv(
+        {
+          STAGE: {
+            type: "enum",
+            values: ["development", "staging", "production"],
+          },
+        },
+        { env: { STAGE: "dev" } }
+      ),
+    (e) =>
+      e instanceof EnvValidationError &&
+      e.errors.some((err) => err.kind === "invalid" && err.key === "STAGE")
+  );
+});

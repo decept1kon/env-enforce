@@ -36,6 +36,20 @@ export interface BooleanSpec {
 }
 
 /**
+ * Fixed string enum type.
+ */
+export interface EnumSpec {
+  readonly type: "enum";
+  /** Allowed values (case-sensitive). */
+  readonly values: readonly string[];
+  readonly required?: boolean;
+  /** Default value when missing (and not overridden by env). */
+  readonly default?: string;
+  /** Additional validation hook after enum check. */
+  readonly validate?: (value: string) => true | string;
+}
+
+/**
  * Custom parser/validator. Receives raw string (or undefined if missing).
  * Return the typed value on success; throw or return ValidationError to fail.
  */
@@ -52,6 +66,7 @@ export type SchemaEntry =
   | StringSpec
   | NumberSpec
   | BooleanSpec
+  | EnumSpec
   | CustomSpec<unknown>;
 
 export type Schema = Record<string, SchemaEntry>;
@@ -103,7 +118,9 @@ export type InferEnv<S extends Schema> = {
       ? number
       : S[K] extends BooleanSpec
         ? boolean
-        : S[K] extends CustomSpec<infer T>
-          ? T
-          : never;
+        : S[K] extends EnumSpec
+          ? S[K]["values"][number]
+          : S[K] extends CustomSpec<infer T>
+            ? T
+            : never;
 };

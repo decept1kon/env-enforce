@@ -1,5 +1,7 @@
 # dotenv-safe-once
 
+![runtime size](https://img.shields.io/badge/runtime-~12KB%20JS,_0%20deps-brightgreen)
+
 A zero-dependency, fail-fast environment variable validator for Node.js services. Run once at startup; no global state, no async, no reloading.
 
 - **Production-safe env validation for serious Node services**
@@ -47,6 +49,7 @@ Validates `process.env` (or `options.env`) against `schema`. Returns a typed obj
 | `string`  | `{ type: "string", required?: boolean, default?: string, allowEmpty?: boolean, validate?: (s: string) => true \| string }` | `string` |
 | `number`  | `{ type: "number", required?: boolean, default?: number, validate?: (n: number) => true \| string }` | `number` |
 | `boolean` | `{ type: "boolean", required?: boolean, default?: boolean, validate?: (b: boolean) => true \| string }` | `boolean` |
+| `enum`    | `{ type: "enum", values: readonly string[], required?: boolean, default?: string, validate?: (s: string) => true \| string }` | union of values |
 | `custom`  | `{ type: "custom", required?: boolean, default?: T, parse: (raw: string \| undefined) => T, validate?: (v: T) => true \| string }` | `T` |
 
 - **`required`** — Default `true`. Set `required: false` for optional keys.
@@ -70,10 +73,10 @@ Validates `process.env` (or `options.env`) against `schema`. Returns a typed obj
 
 **Error kinds**
 
-- **missing** — Required variable absent or empty (when `allowEmpty` is false).
-- **invalid** — Parse or custom `validate` failed.
-- **unexpected** — Present in env but not in schema (when `allowUnknown` is false).
-- **unused** — Declared in schema but not set (optional keys; use `allowUnusedOptional` to allow).
+- **missing** — Declared as required but not present in env (or empty when `allowEmpty` is false).
+- **invalid** — Present in env but fails type coercion, enum membership, or custom `validate`.
+- **unexpected** — Present in env but not declared in the schema (within the optional `prefix` filter).
+- **unused** — Declared in the schema as optional but not set in env (use `allowUnusedOptional` to allow).
 
 ### Types
 
@@ -137,6 +140,37 @@ validateEnv(schema, { annotate: true });
 // Emits ::error file=env,line=1::VAR_NAME: message
 ```
 
+**GitHub Actions CI example**
+
+```yaml
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+      - name: Validate environment
+        run: node dist/index.js
+        env:
+          # app-specific vars
+          APP_PORT: 3000
+          APP_ENV: production
+          # secrets come from GitHub Actions env
+          API_KEY: ${{ secrets.API_KEY }}
+```
+
+In a real project you would export a `validateEnv` call from your app’s entrypoint (or a tiny `ci/validate-env` script) and let `strictCI: true` plus `annotate: true` turn failures into a non-zero exit code with inline annotations.
+
 **Prefix mode (only check your app's vars)**
 
 ```ts
@@ -197,7 +231,7 @@ const env = validateEnv({
 | Sync only / startup-only | Yes | Yes | Yes | Yes |
 | CI exit code option | Yes | No | No | — |
 | GHA annotation output | Yes | No | No | — |
-| Runtime size disclosure | ~12 KB JS in dist, 0 deps | — | — | — |
+| Runtime size disclosure | ~12 KB JS CommonJS, 0 deps | — | — | — |
 
 **When to use dotenv-safe-once**
 
@@ -216,7 +250,7 @@ const env = validateEnv({
 ## Edge cases
 
 - **Empty string** — For `string`, empty is treated as missing unless `allowEmpty: true` (per-key or global).
-- **Booleans** — `"true"`, `"1"`, `"yes"` → `true`; `"false"`, `"0"`, `"no"`, `""` → `false`. Anything else is effectively false (no error); use `validate` if you want to reject invalid values.
+- **Booleans** — By default, `"true"`, `"1"`, `"yes"` → `true`; `"false"`, `"0"`, `"no"`, `""` → `false`. With `strictBooleans: true`, any other value is an error.
 - **Numbers** — `Number(raw)`; NaN or empty → missing/invalid as appropriate.
 - **Optional keys** — If not set and `allowUnusedOptional` is false, you get an "unused" error. Set `allowUnusedOptional: true` to allow optional keys to be absent.
 - **No global state** — Only reads from the provided env object (default `process.env`); does not mutate it.
@@ -227,6 +261,12 @@ const env = validateEnv({
 - Single pass over schema keys and env keys.
 - No I/O; only in-memory checks and small object allocation.
 - Suitable for startup; no caching layer.
+
+**Micro-benchmark (example)**
+
+```bash
+node -e \"const { validateEnv } = require('./dist'); const schema = { PORT: { type: 'number', default: 3000 }, NODE_ENV: { type: 'string', default: 'production' } }; console.time('validate'); for (let i = 0; i < 100000; i++) validateEnv(schema, { allowUnknown: true, allowUnusedOptional: true }); console.timeEnd('validate');\"
+```
 
 ## Future extension ideas
 
