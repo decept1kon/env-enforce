@@ -4,6 +4,8 @@
 export interface StringSpec {
   readonly type: "string";
   readonly required?: boolean;
+  /** Default value when missing (and not overridden by env). */
+  readonly default?: string;
   /** If true, empty string is valid; if false, empty is treated as missing. Default: false */
   readonly allowEmpty?: boolean;
   /** Return true to accept, or a string error message to reject. */
@@ -16,6 +18,8 @@ export interface StringSpec {
 export interface NumberSpec {
   readonly type: "number";
   readonly required?: boolean;
+  /** Default value when missing (and not overridden by env). */
+  readonly default?: number;
   readonly validate?: (value: number) => true | string;
 }
 
@@ -26,6 +30,8 @@ export interface NumberSpec {
 export interface BooleanSpec {
   readonly type: "boolean";
   readonly required?: boolean;
+  /** Default value when missing (and not overridden by env). */
+  readonly default?: boolean;
   readonly validate?: (value: boolean) => true | string;
 }
 
@@ -36,6 +42,8 @@ export interface BooleanSpec {
 export interface CustomSpec<T = unknown> {
   readonly type: "custom";
   readonly required?: boolean;
+  /** Default value when missing (and not overridden by env). */
+  readonly default?: T;
   readonly parse: (raw: string | undefined) => T;
   readonly validate?: (value: T) => true | string;
 }
@@ -50,12 +58,16 @@ export type Schema = Record<string, SchemaEntry>;
 
 /** Options for validateEnv(). */
 export interface ValidateOptions {
+  /** Only consider environment variables whose names start with this prefix when checking for unexpected keys. */
+  prefix?: string;
   /** Allow environment variables not declared in the schema. Default: false */
   allowUnknown?: boolean;
   /** Do not report "unused" for optional keys that are not set. Default: false */
   allowUnusedOptional?: boolean;
   /** Global default for allowEmpty on string keys (per-key overrides). Default: false */
   allowEmpty?: boolean;
+  /** Treat unknown boolean strings as invalid rather than coercing to false. Default: false */
+  strictBooleans?: boolean;
   /** On validation failure, call process.exit(1). For CI. Default: false */
   strictCI?: boolean;
   /** Reporter: "pretty" | "json" | custom. Default: "pretty" */

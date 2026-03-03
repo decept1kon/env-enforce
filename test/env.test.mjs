@@ -150,3 +150,44 @@ test("annotate option: does not crash on failure", () => {
     EnvValidationError
   );
 });
+
+test("defaults: use default when env missing", () => {
+  const env = validateEnv(
+    {
+      PORT: { type: "number", default: 3000 },
+      LOG_LEVEL: { type: "string", required: false, default: "info" },
+      FEATURE_X: { type: "boolean", default: true },
+    },
+    { env: {}, allowUnknown: true, allowUnusedOptional: true }
+  );
+  assert.strictEqual(env.PORT, 3000);
+  assert.strictEqual(env.LOG_LEVEL, "info");
+  assert.strictEqual(env.FEATURE_X, true);
+});
+
+test("strictBooleans: invalid value errors", () => {
+  assert.throws(
+    () =>
+      validateEnv(
+        { FLAG: { type: "boolean", required: true } },
+        { env: { FLAG: "yep" }, strictBooleans: true }
+      ),
+    (e) =>
+      e instanceof EnvValidationError &&
+      e.errors.some((err) => err.kind === "invalid" && err.key === "FLAG")
+  );
+});
+
+test("prefix: ignore non-prefixed env for unexpected checks", () => {
+  const env = validateEnv(
+    {
+      APP_PORT: { type: "number", default: 3000 },
+    },
+    {
+      env: { APP_PORT: "4000", OTHER: "x" },
+      prefix: "APP_",
+      allowUnknown: false,
+    }
+  );
+  assert.strictEqual(env.APP_PORT, 4000);
+});

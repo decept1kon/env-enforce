@@ -40,17 +40,36 @@ function parseEntry(
 ): { value?: unknown; error?: ValidationErrorType } {
   const required = spec.required !== false;
   const globalAllowEmpty = options.allowEmpty ?? false;
+  const strictBooleans = options.strictBooleans ?? false;
 
   if (spec.type === "string") {
     const s = raw ?? "";
     const allowEmpty = spec.allowEmpty ?? globalAllowEmpty;
-    if (s === "" && !allowEmpty) {
-      if (required) {
-        return { error: { kind: "missing", key, message: `Required environment variable "${key}" is missing or empty.` } };
+    const hasDefault = Object.prototype.hasOwnProperty.call(spec, "default");
+
+    // Missing or empty handling with default support
+    if (s === "") {
+      if (hasDefault) {
+        const value = spec.default as string;
+        if (spec.validate) {
+          const v = runValidate(value, spec.validate);
+          if (v !== true) return { error: { kind: "invalid", key, message: v } };
+        }
+        return { value };
       }
-      return { value: undefined };
-    }
-    if (s === "" && allowEmpty) {
+      if (!allowEmpty) {
+        if (required) {
+          return {
+            error: {
+              kind: "missing",
+              key,
+              message: `Required environment variable "${key}" is missing or empty.`,
+            },
+          };
+        }
+        return { value: undefined };
+      }
+      // allowEmpty: true, no default
       const v = spec.validate ? runValidate("", spec.validate) : true;
       if (v !== true) return { error: { kind: "invalid", key, message: v } };
       return { value: "" };
@@ -63,13 +82,34 @@ function parseEntry(
   }
 
   if (spec.type === "number") {
+    const hasDefault = Object.prototype.hasOwnProperty.call(spec, "default");
     const n = parseNumber(raw);
     if (n === null) {
+      if ((raw === undefined || raw === "") && hasDefault) {
+        const value = spec.default as number;
+        if (spec.validate) {
+          const v = runValidate(value, spec.validate);
+          if (v !== true) return { error: { kind: "invalid", key, message: v } };
+        }
+        return { value };
+      }
       if (required && (raw === undefined || raw === "")) {
-        return { error: { kind: "missing", key, message: `Required environment variable "${key}" is missing or not a number.` } };
+        return {
+          error: {
+            kind: "missing",
+            key,
+            message: `Required environment variable "${key}" is missing or not a number.`,
+          },
+        };
       }
       if (raw !== undefined && raw !== "") {
-        return { error: { kind: "invalid", key, message: `"${key}" must be a number, got: ${raw}` } };
+        return {
+          error: {
+            kind: "invalid",
+            key,
+            message: `"${key}" must be a number, got: ${raw}`,
+          },
+        };
       }
       return { value: undefined };
     }
@@ -81,6 +121,41 @@ function parseEntry(
   }
 
   if (spec.type === "boolean") {
+    const hasDefault = Object.prototype.hasOwnProperty.call(spec, "default");
+
+    if (raw === undefined) {
+      if (hasDefault) {
+        const value = spec.default as boolean;
+        if (spec.validate) {
+          const v = runValidate(value, spec.validate);
+          if (v !== true) return { error: { kind: "invalid", key, message: v } };
+        }
+        return { value };
+      }
+      // Missing boolean defaults to false (as before).
+      const b = false;
+      if (spec.validate) {
+        const v = runValidate(b, spec.validate);
+        if (v !== true) return { error: { kind: "invalid", key, message: v } };
+      }
+      return { value: b };
+    }
+
+    const lower = raw.toLowerCase().trim();
+    if (
+      strictBooleans &&
+      !BOOLEAN_TRUE.has(lower) &&
+      !BOOLEAN_FALSE.has(lower)
+    ) {
+      return {
+        error: {
+          kind: "invalid",
+          key,
+          message: `"${key}" must be a boolean (true/false/1/0/yes/no), got: ${raw}`,
+        },
+      };
+    }
+
     const b = parseBoolean(raw);
     if (spec.validate) {
       const v = runValidate(b, spec.validate);
@@ -90,8 +165,14 @@ function parseEntry(
   }
 
   if (spec.type === "custom") {
+    const hasDefault = Object.prototype.hasOwnProperty.call(spec, "default");
     try {
-      const value = spec.parse(raw);
+      let value: unknown;
+      if (raw === undefined && hasDefault) {
+        value = spec.default as unknown;
+      } else {
+        value = spec.parse(raw);
+      }
       if (required && value === undefined && raw === undefined) {
         return { error: { kind: "missing", key, message: `Required environment variable "${key}" is missing.` } };
       }
@@ -115,11 +196,14 @@ export function runValidation(
 ): ValidationResult {
   const env = options.env ?? process.env;
   const allowUnknown = options.allowUnknown ?? false;
+  const prefix = options.prefix;
   const errors: ValidationErrorType[] = [];
   const result: Record<string, unknown> = {};
 
   const schemaKeys = new Set(Object.keys(schema));
-  const envKeys = new Set(Object.keys(env));
+  const envKeys = new Set(
+    Object.keys(env).filter((key) => !prefix || key.startsWith(prefix))
+  );
 
   for (const key of schemaKeys) {
     const spec = schema[key];

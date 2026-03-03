@@ -1,7 +1,8 @@
 # dotenv-safe-once
 
-A zero-dependency, fail-fast environment variable validator for Node.js. Run once at startup; no global state, no async, no reloading.
+A zero-dependency, fail-fast environment variable validator for Node.js services. Run once at startup; no global state, no async, no reloading.
 
+- **Production-safe env validation for serious Node services**
 - **Zero runtime dependencies**
 - **TypeScript** with inferred return types from your schema
 - **Sync only** — designed for top-level validation before your app runs
@@ -43,12 +44,13 @@ Validates `process.env` (or `options.env`) against `schema`. Returns a typed obj
 
 | Type       | Spec shape | Inferred type |
 |-----------|------------|----------------|
-| `string`  | `{ type: "string", required?: boolean, allowEmpty?: boolean, validate?: (s: string) => true \| string }` | `string` |
-| `number`  | `{ type: "number", required?: boolean, validate?: (n: number) => true \| string }` | `number` |
-| `boolean` | `{ type: "boolean", required?: boolean, validate?: (b: boolean) => true \| string }` | `boolean` |
-| `custom`  | `{ type: "custom", required?: boolean, parse: (raw: string \| undefined) => T, validate?: (v: T) => true \| string }` | `T` |
+| `string`  | `{ type: "string", required?: boolean, default?: string, allowEmpty?: boolean, validate?: (s: string) => true \| string }` | `string` |
+| `number`  | `{ type: "number", required?: boolean, default?: number, validate?: (n: number) => true \| string }` | `number` |
+| `boolean` | `{ type: "boolean", required?: boolean, default?: boolean, validate?: (b: boolean) => true \| string }` | `boolean` |
+| `custom`  | `{ type: "custom", required?: boolean, default?: T, parse: (raw: string \| undefined) => T, validate?: (v: T) => true \| string }` | `T` |
 
 - **`required`** — Default `true`. Set `required: false` for optional keys.
+- **`default`** — Per-key default value when env is missing/empty (used before `validate`).
 - **`allowEmpty`** (string only) — If `true`, empty string is valid; otherwise empty is treated as missing.
 - **`validate`** — Return `true` to accept, or a string error message to reject.
 
@@ -56,9 +58,11 @@ Validates `process.env` (or `options.env`) against `schema`. Returns a typed obj
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `prefix` | `undefined` | Only consider env vars whose names start with this prefix for unexpected checks. |
 | `allowUnknown` | `false` | Allow env vars not declared in the schema. |
 | `allowUnusedOptional` | `false` | Do not report "unused" for optional keys that are not set. |
 | `allowEmpty` | `false` | Global default for string `allowEmpty`. |
+| `strictBooleans` | `false` | Treat unknown boolean strings as invalid instead of coercing to `false`. |
 | `strictCI` | `false` | On failure, call `process.exit(1)`. |
 | `reporter` | `"pretty"` | `"pretty"` \| `"json"` \| `{ report(result): void }`. |
 | `annotate` | `false` | Emit GitHub Actions `::error file=...,line=...::` lines. |
@@ -133,6 +137,51 @@ validateEnv(schema, { annotate: true });
 // Emits ::error file=env,line=1::VAR_NAME: message
 ```
 
+**Prefix mode (only check your app's vars)**
+
+```ts
+const env = validateEnv(
+  {
+    APP_PORT: { type: "number", default: 3000 },
+    APP_ENV: { type: "string", required: true },
+  },
+  {
+    prefix: "APP_",
+    allowUnknown: false, // still fail on unexpected APP_* vars
+  }
+);
+```
+
+This lets you ignore system-level env like `PATH` or `HOME` while still being strict about your service-specific `APP_` variables.
+
+**Strict booleans**
+
+```ts
+validateEnv(
+  { FEATURE_X: { type: "boolean", required: true } },
+  {
+    env: { FEATURE_X: "yep" },
+    strictBooleans: true, // throws: invalid boolean
+  }
+);
+```
+
+With `strictBooleans: true`, only `true/false/1/0/yes/no` (case-insensitive) and empty string are accepted.
+
+**Defaults**
+
+```ts
+const env = validateEnv({
+  PORT: { type: "number", default: 3000 },
+  LOG_LEVEL: { type: "string", required: false, default: "info" },
+  FEATURE_X: { type: "boolean", default: false },
+});
+
+// If PORT is unset, env.PORT is 3000.
+// If LOG_LEVEL is unset, env.LOG_LEVEL is "info".
+// Defaults still go through any validate() functions you define.
+```
+
 ## Comparison with other tools
 
 | | dotenv-safe-once | dotenv-safe | envalid | t3-env |
@@ -143,16 +192,26 @@ validateEnv(schema, { annotate: true });
 | Fail on missing required | Yes | Yes | Yes | Yes |
 | Unexpected env (not in schema) | Yes (configurable) | Yes | No (by default) | — |
 | Unused declared (declared, not set) | Yes (configurable) | No | No | — |
+| Prefix mode for app vars | Yes | No | No | No |
 | Custom validator per key | Yes | No | Yes | Via Zod |
 | Sync only / startup-only | Yes | Yes | Yes | Yes |
 | CI exit code option | Yes | No | No | — |
 | GHA annotation output | Yes | No | No | — |
+| Runtime size disclosure | ~12 KB JS in dist, 0 deps | — | — | — |
 
 **When to use dotenv-safe-once**
 
 - You already load env with `dotenv` and only want validation.
-- You want strict checks (unexpected + unused) and minimal API.
-- You want zero deps and no Zod/Joi.
+- You want strict checks (missing + invalid + unexpected + unused) with a tiny mental model.
+- You want zero deps and no Zod/Joi in your runtime.
+- You need CI-friendly startup guards (non-zero exit code, annotations) without heavyweight schema engines.
+
+**Compared to envalid**
+
+- Smaller surface area: one main function, no helpers, no global state.
+- Stricter by default on **unexpected** and **unused** keys (configurable).
+- **Prefix mode** and **GitHub Actions annotations** built-in.
+- Zero deps and no assumptions about how you load `.env` (dotenv, SSM, Vault, etc. all work).
 
 ## Edge cases
 
