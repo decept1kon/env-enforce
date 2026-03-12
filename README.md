@@ -1,6 +1,9 @@
 # env-enforce
 
-![runtime size](https://img.shields.io/badge/runtime-~12KB%20JS,_0%20deps-brightgreen)
+[![npm version](https://img.shields.io/npm/v/env-enforce.svg)](https://www.npmjs.com/package/env-enforce)
+[![npm downloads](https://img.shields.io/npm/dm/env-enforce.svg)](https://www.npmjs.com/package/env-enforce)
+[![CI](https://github.com/Decept1kon/env-enforce/actions/workflows/publish.yml/badge.svg)](https://github.com/Decept1kon/env-enforce/actions/workflows/publish.yml)
+[![license](https://img.shields.io/npm/l/env-enforce.svg)](https://github.com/Decept1kon/env-enforce/blob/main/LICENSE)
 
 A zero-dependency, fail-fast environment variable validator for Node.js services. Run once at startup; no global state, no async, no reloading.
 
