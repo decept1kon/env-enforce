@@ -86,6 +86,7 @@ import type {
   StringSpec,
   NumberSpec,
   BooleanSpec,
+  EnumSpec,
   CustomSpec,
   ValidateOptions,
   InferEnv,
@@ -160,7 +161,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Validate environment
-        run: node dist/index.js
+        run: node path/to/your-env-check.js
         env:
           # app-specific vars
           APP_PORT: 3000
@@ -270,7 +271,6 @@ node -e \"const { validateEnv } = require('./dist'); const schema = { PORT: { ty
 
 ## Future extension ideas
 
-- **`default`** — Per-key default when missing (optional keys).
 - **`file`/`line` in errors** — From call stack or optional option for better annotations.
 - **Allowlist of unexpected keys** — e.g. allow `LANG` and `PATH` but no others.
 - **Coerce mode** — e.g. trim strings, normalize booleans, without changing the core “fail-fast” contract.

@@ -51,7 +51,9 @@ export interface EnumSpec {
 
 /**
  * Custom parser/validator. Receives raw string (or undefined if missing).
- * Return the typed value on success; throw or return ValidationError to fail.
+ * Should return the typed value on success, or throw on failure.
+ * Additional checks can be implemented via the optional `validate` hook,
+ * which should return `true` to accept or a string error message to reject.
  */
 export interface CustomSpec<T = unknown> {
   readonly type: "custom";

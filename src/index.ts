@@ -47,6 +47,9 @@ export function validateEnv<S extends Schema>(
   ) {
     reporter = reporterOption;
   } else {
+    process.stderr.write(
+      '[env-enforce] Invalid "reporter" option; falling back to "pretty".\n'
+    );
     reporter = createPrettyReporter();
   }
 
@@ -73,6 +76,7 @@ export type {
   StringSpec,
   NumberSpec,
   BooleanSpec,
+  EnumSpec,
   CustomSpec,
   ValidateOptions,
   InferEnv,
