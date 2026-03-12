@@ -1,6 +1,6 @@
 {
   "name": "env-enforce",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zero-dependency, fail-fast environment variable validator for Node.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,7 +17,8 @@
     "build": "tsc",
     "test": "npm run build && node --test test/env.test.mjs",
     "test:smoke": "npm run build && node test/smoke.mjs",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "publish:dry-run": "npm run build && npm publish --access public --dry-run"
   },
   "engines": {
     "node": ">=16"
