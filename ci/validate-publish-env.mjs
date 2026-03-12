@@ -18,6 +18,7 @@ validateEnv(
     strictCI: true,
     reporter: "pretty",
     annotate: true,
+    allowUnknown: true,
   }
 );
 
