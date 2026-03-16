@@ -241,6 +241,17 @@ export function runValidation(
   const errors: ValidationErrorType[] = [];
   const result: Record<string, unknown> = {};
 
+  const defaultFile = options.errorLocation?.file;
+  const defaultLine = options.errorLocation?.line;
+
+  function pushError(err: ValidationErrorType) {
+    errors.push({
+      ...err,
+      file: err.file ?? defaultFile,
+      line: err.line ?? defaultLine,
+    });
+  }
+
   const schemaKeys = new Set(Object.keys(schema));
   const envKeys = new Set(
     Object.keys(env).filter((key) => !prefix || key.startsWith(prefix))
@@ -251,14 +262,14 @@ export function runValidation(
     const raw = env[key];
     const out = parseEntry(key, spec, raw, options);
     if (out.error) {
-      errors.push(out.error);
+      pushError(out.error);
     } else if (out.value !== undefined) {
       result[key] = out.value;
     } else {
       const required = spec.required !== false;
       const allowUnusedOptional = options.allowUnusedOptional ?? false;
       if (!required && !allowUnusedOptional) {
-        errors.push({
+        pushError({
           kind: "unused",
           key,
           message: `Declared variable "${key}" is not set in environment.`,
@@ -270,7 +281,7 @@ export function runValidation(
   if (!allowUnknown) {
     for (const key of envKeys) {
       if (!schemaKeys.has(key)) {
-        errors.push({
+        pushError({
           kind: "unexpected",
           key,
           message: `Unexpected environment variable "${key}" (not in schema).`,

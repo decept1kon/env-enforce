@@ -221,3 +221,21 @@ test("enum: restricts to allowed values", () => {
       e.errors.some((err) => err.kind === "invalid" && err.key === "STAGE")
   );
 });
+
+test("errorLocation: applies default file/line to errors", () => {
+  assert.throws(
+    () =>
+      validateEnv(
+        { REQUIRED: { type: "string", required: true } },
+        {
+          env: {},
+          errorLocation: { file: "env.config.ts", line: 10 },
+        }
+      ),
+    (e) => {
+      if (!(e instanceof EnvValidationError)) return false;
+      const first = e.errors[0];
+      return first.file === "env.config.ts" && first.line === 10;
+    }
+  );
+});
