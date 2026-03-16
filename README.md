@@ -274,6 +274,9 @@ node -e \"const { validateEnv } = require('./dist'); const schema = { PORT: { ty
 
 ## Future extension ideas
 
-- **`file`/`line` in errors** — From call stack or optional option for better annotations.
 - **Allowlist of unexpected keys** — e.g. allow `LANG` and `PATH` but no others.
 - **Coerce mode** — e.g. trim strings, normalize booleans, without changing the core “fail-fast” contract.
+
+## Changelog
+
+See [CHANGELOG](./CHANGELOG.md) for release history.

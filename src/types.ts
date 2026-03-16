@@ -91,6 +91,14 @@ export interface ValidateOptions {
   reporter?: "pretty" | "json" | Reporter;
   /** Emit GitHub Actions workflow command (file:line) for errors. Default: false */
   annotate?: boolean;
+  /**
+   * Optional default source location to attach to every ValidationError.
+   * Useful for CI annotations (e.g. a config file path and line number).
+   */
+  errorLocation?: {
+    file?: string;
+    line?: number;
+  };
   /** Source env object (default: process.env). Used for testing. */
   env?: NodeJS.ProcessEnv;
 }
